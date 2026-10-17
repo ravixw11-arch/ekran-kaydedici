@@ -1,0 +1,1314 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kayıt Programı</title>
+<style>
+  :root{
+    --bg: #14171a;
+    --panel: #1b1f23;
+    --panel-2: #21262b;
+    --line: #2c3238;
+    --text: #e7ebee;
+    --muted: #8b95a1;
+    --accent: #4fd1c5;
+    --accent-dim: #2e6b64;
+    --danger: #e5533d;
+    --danger-dim: #7a2c21;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-size: 15px;
+  }
+  body { min-height: 100vh; display: flex; flex-direction: column; }
+
+  header {
+    padding: 18px 24px 14px;
+    border-bottom: 1px solid var(--line);
+  }
+  header h1 {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+  }
+  header p {
+    margin: 4px 0 0;
+    color: var(--muted);
+    font-size: 13px;
+  }
+
+  main {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 340px 1fr;
+    gap: 0;
+  }
+  @media (max-width: 800px) {
+    main { grid-template-columns: 1fr; }
+  }
+
+  .panel {
+    padding: 20px;
+    border-right: 1px solid var(--line);
+    background: var(--panel);
+    overflow-y: auto;
+  }
+  @media (max-width: 800px) {
+    .panel { border-right: none; border-bottom: 1px solid var(--line); }
+  }
+
+  .group { margin-bottom: 22px; }
+  .group-label {
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 8px;
+    font-weight: 600;
+  }
+
+  .seg {
+    display: flex;
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 3px;
+    gap: 3px;
+  }
+  .seg button {
+    flex: 1;
+    background: transparent;
+    border: none;
+    color: var(--muted);
+    padding: 8px 6px;
+    border-radius: 6px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: background .15s, color .15s;
+  }
+  .seg button.active {
+    background: var(--accent-dim);
+    color: var(--text);
+  }
+  .seg button:disabled { opacity: .4; cursor: not-allowed; }
+
+  .toggle-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .toggle-row:last-child { border-bottom: none; }
+  .toggle-row .label { font-size: 14px; }
+  .toggle-row .hint { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+  .switch {
+    position: relative;
+    width: 42px; height: 24px;
+    flex-shrink: 0;
+  }
+  .switch input { opacity: 0; width: 0; height: 0; }
+  .switch .track {
+    position: absolute; inset: 0;
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    cursor: pointer;
+    transition: background .15s;
+  }
+  .switch .track::before {
+    content: "";
+    position: absolute;
+    width: 16px; height: 16px;
+    left: 3px; top: 3px;
+    background: var(--muted);
+    border-radius: 50%;
+    transition: transform .15s, background .15s;
+  }
+  .switch input:checked + .track { background: var(--accent-dim); border-color: var(--accent); }
+  .switch input:checked + .track::before { transform: translateX(18px); background: var(--accent); }
+  .switch input:disabled + .track { opacity: .4; cursor: not-allowed; }
+
+  .volume-row {
+    padding: 8px 0 12px;
+    display: none;
+    gap: 10px;
+    align-items: center;
+  }
+  .volume-row.show { display: flex; }
+  .volume-row input[type="range"] {
+    flex: 1;
+    min-width: 0;
+    accent-color: var(--accent);
+  }
+  .volume-value {
+    width: 42px;
+    text-align: right;
+    font-size: 12px;
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+  }
+
+  select, input[type="number"] {
+    width: 100%;
+    background: var(--panel-2);
+    color: var(--text);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 9px 10px;
+    font-size: 13px;
+    cursor: pointer;
+  }
+  select:disabled, input[type="number"]:disabled { opacity: .5; cursor: not-allowed; }
+
+  .stage {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    gap: 18px;
+  }
+
+  .preview-frame {
+    width: 100%;
+    max-width: 720px;
+    aspect-ratio: 16/9;
+    background: #000;
+    border-radius: 10px;
+    border: 1px solid var(--line);
+    overflow: hidden;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: aspect-ratio 0.2s ease;
+  }
+  .preview-frame.ratio-tiktok {
+    aspect-ratio: 9/16;
+    max-height: 480px;
+  }
+  .preview-frame.ratio-youtube {
+    aspect-ratio: 16/9;
+  }
+  .preview-frame.ratio-default {
+    aspect-ratio: 16/9;
+  }
+  .preview-frame video, .preview-frame canvas {
+    width: 100%; height: 100%;
+    object-fit: contain;
+  }
+
+  .preview-empty {
+    color: var(--muted);
+    font-size: 13px;
+    text-align: center;
+    padding: 0 20px;
+  }
+
+  .status-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-variant-numeric: tabular-nums;
+  }
+  .dot {
+    width: 9px; height: 9px;
+    border-radius: 50%;
+    background: var(--muted);
+  }
+  .dot.recording { background: var(--danger); animation: pulse 1.2s infinite; }
+  .dot.paused { background: #e0b04f; animation: none; }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: .35; }
+  }
+  .timer { font-size: 15px; color: var(--text); }
+  .status-text { font-size: 13px; color: var(--muted); }
+
+  .controls {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  button.action {
+    border: none;
+    border-radius: 999px;
+    padding: 13px 26px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: transform .1s, opacity .15s;
+  }
+  button.action:active { transform: scale(0.97); }
+  button.action:disabled { opacity: .35; cursor: not-allowed; }
+
+  .btn-start { background: var(--accent); color: #08302c; }
+  .btn-pause { background: var(--panel-2); color: var(--text); border: 1px solid var(--line) !important; }
+  .btn-stop { background: var(--danger); color: #fff; }
+
+  .download-box {
+    width: 100%;
+    max-width: 720px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 14px 16px;
+    display: none;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .download-box.show { display: flex; }
+  .download-box .meta { font-size: 13px; color: var(--muted); }
+  .download-box a {
+    background: var(--accent);
+    color: #08302c;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 13px;
+    padding: 9px 16px;
+    border-radius: 8px;
+  }
+
+  .error-box {
+    width: 100%;
+    max-width: 720px;
+    background: rgba(229,83,61,.1);
+    border: 1px solid var(--danger-dim);
+    color: #f2a99a;
+    border-radius: 10px;
+    padding: 12px 14px;
+    font-size: 13px;
+    display: none;
+  }
+  .error-box.show { display: block; }
+
+  footer {
+    text-align: center;
+    font-size: 12px;
+    color: var(--muted);
+    padding: 14px;
+    border-top: 1px solid var(--line);
+  }
+
+  .countdown-overlay {
+    position: absolute;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0,0,0,.68);
+    color: var(--accent);
+    font-size: 82px;
+    font-weight: 800;
+    z-index: 5;
+    user-select: none;
+  }
+
+  .recovery-box {
+    width: 100%;
+    max-width: 720px;
+    background: rgba(224,176,79,.08);
+    border: 1px solid rgba(224,176,79,.45);
+    color: var(--text);
+    border-radius: 10px;
+    padding: 11px 13px;
+    font-size: 12px;
+    display: none;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .recovery-box.show { display: flex; }
+  .recovery-box button {
+    background: var(--panel-2);
+    color: var(--text);
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    padding: 7px 10px;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+</style>
+</head>
+<body>
+<div id="windowModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); z-index:100; align-items:center; justify-content:center;">
+  <div style="background:var(--panel); border:1px solid var(--line); padding:20px; border-radius:10px; width:400px; max-height:80vh; overflow-y:auto;">
+    <h2 style="margin-top:0; font-size:16px;">Oyun / Uygulama Penceresi Seç</h2>
+    <div id="windowList" style="margin: 15px 0;">Pencereler yükleniyor...</div>
+    <button id="closeWindowModal" style="width:100%; padding:8px; background:var(--panel-2); border:1px solid var(--line); color:var(--text); border-radius:6px; cursor:pointer;">İptal</button>
+  </div>
+</div>
+
+<header>
+  <div style="text-align:center;">
+    <h1 style="font-size:30px; margin:0; font-weight:800; letter-spacing:-0.02em;">Ekran Kaydedici</h1>
+    <div style="margin-top:4px; font-size:13px; color:var(--accent); font-weight:600;">Ravix_w1</div>
+    <p style="margin-top:7px;">Düşük sistemli bilgisayarlar için hafif ekran kaydedici.</p>
+  </div>
+</header>
+
+<main>
+  <div class="panel">
+
+    <div class="group">
+      <div class="group-label">Kaydedilecek alan</div>
+      <div class="seg" id="sourceSeg">
+        <button data-src="monitor" class="active">Bütün Ekran</button>
+        <button data-src="window">Oyun / Pencere</button>
+      </div>
+      <div class="toggle-row" style="border:none; padding-top:8px;">
+        <div>
+          <div class="hint">"Oyun / Pencere" seçildiğinde pencere çerçeveleri hariç tutulur, yalnızca içerik kaydedilir.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="group">
+      <div class="group-label">FPS Ayarı (Kare Hızı)</div>
+      <select id="fpsSelect">
+        <option value="normal" selected>Normal FPS (30 FPS - Dengeli)</option>
+        <option value="low">Düşük FPS (15 FPS - En Hafif / Laptop Dostu)</option>
+        <option value="custom">Özel FPS Ayarla</option>
+      </select>
+      <div id="customFpsRow" style="display:none; margin-top:8px;">
+        <input type="number" id="customFpsInput" min="5" max="60" value="30" placeholder="Örn: 24">
+        <div class="hint" style="margin-top:4px;">5 ile 60 arasında bir değer girin.</div>
+      </div>
+    </div>
+
+    <div class="group">
+      <div class="group-label">Kayıt En-Boy Oranı</div>
+      <select id="aspectRatioSelect">
+        <option value="default" selected>Tam Ekran / Pencere (Varsayılan)</option>
+        <option value="tiktok">TikTok / Shorts (9:16 Dikey)</option>
+        <option value="youtube">YouTube (16:9 Yatay)</option>
+      </select>
+    </div>
+
+    <div class="group">
+      <div class="group-label">Ses</div>
+      <div class="toggle-row">
+        <div>
+          <div class="label">Mikrofon</div>
+          <div class="hint">Sesini kayda ekle</div>
+        </div>
+        <label class="switch">
+          <input type="checkbox" id="micToggle">
+          <span class="track"></span>
+        </label>
+      </div>
+      <div class="toggle-row" id="micDeviceRow" style="display:none; border:none; padding-top:0; padding-bottom:12px;">
+        <select id="micDeviceSelect" disabled>
+          <option value="">Mikrofonlar listeleniyor…</option>
+        </select>
+      </div>
+      <div class="volume-row" id="micVolumeRow">
+        <input type="range" id="micVolume" min="0" max="100" value="100" step="1" aria-label="Mikrofon ses seviyesi">
+        <span class="volume-value" id="micVolumeValue">100%</span>
+      </div>
+      <div class="toggle-row">
+        <div>
+          <div class="label">Ekran / Sistem Sesi</div>
+          <div class="hint" id="sysAudioHint">Oyun, video ve diğer bilgisayar seslerini kayda ekler.</div>
+        </div>
+        <label class="switch">
+          <input type="checkbox" id="sysAudioToggle" checked>
+          <span class="track"></span>
+        </label>
+      </div>
+      <div class="volume-row show" id="sysVolumeRow">
+        <input type="range" id="sysVolume" min="0" max="100" value="100" step="1" aria-label="Sistem sesi seviyesi">
+        <span class="volume-value" id="sysVolumeValue">100%</span>
+      </div>
+    </div>
+
+    <div class="group">
+      <div class="group-label">Kalite</div>
+      <select id="qualitySelect">
+        <option value="low">Düşük — 720p, 1.5 Mbps (en hafif)</option>
+        <option value="mid" selected>Orta — 720p, 3 Mbps</option>
+        <option value="high">Yüksek — 1080p, 6 Mbps</option>
+      </select>
+    </div>
+
+    <div class="group">
+      <div class="group-label">Çıkış formatı</div>
+      <select id="formatSelect"></select>
+      <div class="hint" id="formatHint" style="margin-top:6px;"></div>
+    </div>
+
+  </div>
+
+  <div class="stage">
+
+    <div class="preview-frame ratio-default" id="previewFrame">
+      <video id="preview" autoplay muted playsinline style="display:none;"></video>
+      <canvas id="previewCanvas"></canvas>
+      <div class="preview-empty" id="previewEmpty">Önizleme başlatmak için ekran seçebilirsiniz.</div>
+      <div class="countdown-overlay" id="countdownOverlay"></div>
+    </div>
+
+    <div class="status-row">
+      <span class="dot" id="statusDot"></span>
+      <span class="timer" id="timer">00:00</span>
+      <span class="status-text" id="statusText">Hazır</span>
+    </div>
+    <div class="status-text" id="diagText" style="text-align:center; font-size:12px;"></div>
+
+    <div class="controls">
+      <button class="action btn-start" id="btnStart">Kayda Başla</button>
+      <button class="action btn-pause" id="btnPause" disabled>Duraklat</button>
+      <button class="action btn-stop" id="btnStop" disabled>Durdur</button>
+    </div>
+
+    <div class="recovery-box" id="recoveryBox">
+      <span id="recoveryText">Önceki kayıttan kurtarma dosyası bulundu.</span>
+      <button id="openRecoveryFolder" type="button">Klasörü Aç</button>
+    </div>
+
+    <div class="error-box" id="errorBox"></div>
+
+    <div class="download-box" id="downloadBox">
+      <div style="display:flex; flex-direction:column; gap:4px; flex:1; min-width:180px;">
+        <div class="meta" id="downloadMeta">Kayıt hazır</div>
+        <input type="text" id="fileNameInput" placeholder="Dosya adı" style="background:var(--panel-2); border:1px solid var(--line); color:var(--text); border-radius:6px; padding:7px 9px; font-size:13px;">
+      </div>
+      <a id="downloadLink" download="kayit.mp4">İndir</a>
+    </div>
+
+  </div>
+</main>
+
+<footer>
+  Kayıt bilgisayarında oluşturulur; uygulama tarafından internete yüklenmez.
+</footer>
+
+<script>
+(function(){
+  const sourceSeg = document.getElementById('sourceSeg');
+  const aspectRatioSelect = document.getElementById('aspectRatioSelect');
+  const previewFrame = document.getElementById('previewFrame');
+  const micToggle = document.getElementById('micToggle');
+  const micDeviceRow = document.getElementById('micDeviceRow');
+  const micDeviceSelect = document.getElementById('micDeviceSelect');
+  const sysAudioToggle = document.getElementById('sysAudioToggle');
+  const micVolumeRow = document.getElementById('micVolumeRow');
+  const micVolume = document.getElementById('micVolume');
+  const micVolumeValue = document.getElementById('micVolumeValue');
+  const sysVolumeRow = document.getElementById('sysVolumeRow');
+  const sysVolume = document.getElementById('sysVolume');
+  const sysVolumeValue = document.getElementById('sysVolumeValue');
+  const qualitySelect = document.getElementById('qualitySelect');
+  const formatSelect = document.getElementById('formatSelect');
+  const formatHint = document.getElementById('formatHint');
+  const fileNameInput = document.getElementById('fileNameInput');
+
+  const fpsSelect = document.getElementById('fpsSelect');
+  const customFpsRow = document.getElementById('customFpsRow');
+  const customFpsInput = document.getElementById('customFpsInput');
+
+  const preview = document.getElementById('preview');
+  const previewCanvas = document.getElementById('previewCanvas');
+  const previewCtx = previewCanvas.getContext('2d', { alpha: false, desynchronized: true });
+  const previewEmpty = document.getElementById('previewEmpty');
+  const countdownOverlay = document.getElementById('countdownOverlay');
+  const recoveryBox = document.getElementById('recoveryBox');
+  const recoveryText = document.getElementById('recoveryText');
+  const openRecoveryFolder = document.getElementById('openRecoveryFolder');
+  const statusDot = document.getElementById('statusDot');
+  const timerEl = document.getElementById('timer');
+  const statusText = document.getElementById('statusText');
+  const errorBox = document.getElementById('errorBox');
+  const downloadBox = document.getElementById('downloadBox');
+  const downloadMeta = document.getElementById('downloadMeta');
+  const downloadLink = document.getElementById('downloadLink');
+
+  const btnStart = document.getElementById('btnStart');
+  const btnPause = document.getElementById('btnPause');
+  const btnStop = document.getElementById('btnStop');
+
+  let selectedSource = 'monitor';
+  let mediaStream = null;
+  let micStream = null;
+  let recorder = null;
+  let chunks = [];
+  let timerInterval = null;
+  let secondsElapsed = 0;
+  let chosenMime = '';
+  let chosenExt = 'webm';
+  let audioContext = null;
+  let mixedAudioDestination = null;
+  let isCountingDown = false;
+  let recoveryActive = false;
+  let previewStream = null;
+  let isRecordingActive = false;
+  let previewRenderInterval = null;
+
+  // DÜZELTME: window._activeCanvasInterval yerine modül seviyesinde değişken.
+  let activeCanvasInterval = null;
+
+  const SETTINGS_KEY = 'ravix_recorder_settings_v9';
+  let savedMicDeviceId = '';
+
+  fpsSelect.addEventListener('change', () => {
+    if (fpsSelect.value === 'custom') {
+      customFpsRow.style.display = 'block';
+    } else {
+      customFpsRow.style.display = 'none';
+    }
+    saveSettings();
+  });
+
+  function getTargetFps() {
+    if (fpsSelect.value === 'low') return 15;
+    if (fpsSelect.value === 'custom') {
+      let val = parseInt(customFpsInput.value, 10);
+      if (isNaN(val) || val < 5) return 15;
+      if (val > 60) return 60;
+      return val;
+    }
+    return 30;
+  }
+
+  function updatePreviewFrameRatio(val) {
+    previewFrame.className = 'preview-frame';
+    if (val === 'tiktok') {
+      previewFrame.classList.add('ratio-tiktok');
+    } else if (val === 'youtube') {
+      previewFrame.classList.add('ratio-youtube');
+    } else {
+      previewFrame.classList.add('ratio-default');
+    }
+  }
+
+  aspectRatioSelect.addEventListener('change', () => {
+    updatePreviewFrameRatio(aspectRatioSelect.value);
+    saveSettings();
+  });
+
+  const sysAudioHint = document.getElementById('sysAudioHint');
+  function updateSysAudioHint(){
+    if (selectedSource === 'window') {
+      sysAudioHint.textContent = 'Seçilen oyun/pencere içeriği kaydedilir.';
+    } else {
+      sysAudioHint.textContent = 'Oyun, video ve diğer bilgisayar seslerini kayda ekler. (Sistem sesi sadece Windows\'ta çalışır.)';
+    }
+  }
+
+  async function startLivePreview() {
+    if (isRecordingActive || previewStream) return;
+    try {
+      const currentFps = getTargetFps();
+      previewStream = await navigator.mediaDevices.getDisplayMedia({
+        video: { frameRate: { ideal: currentFps } },
+        audio: false
+      });
+      preview.srcObject = previewStream;
+      await preview.play().catch(() => {});
+      previewEmpty.style.display = 'none';
+
+      if (previewRenderInterval) clearInterval(previewRenderInterval);
+
+      // HAFİF LAPTOP OPTİMİZASYONU: Boşta önizleme FPS'i 20 ile sınırlandı.
+      const previewFps = Math.min(currentFps, 20);
+
+      previewRenderInterval = setInterval(() => {
+        if (preview.readyState >= 2 && !isRecordingActive) {
+          const vW = preview.videoWidth || 1920;
+          const vH = preview.videoHeight || 1080;
+          const aspectChoice = aspectRatioSelect.value;
+
+          let tW = vW;
+          let tH = vH;
+
+          if (aspectChoice === 'tiktok') {
+            tH = vH;
+            tW = Math.round(vH * (9 / 16));
+            if (tW > vW) {
+              tW = vW;
+              tH = Math.round(vW * (16 / 9));
+            }
+          } else if (aspectChoice === 'youtube') {
+            tW = vW;
+            tH = Math.round(vW * (9 / 16));
+            if (tH > vH) {
+              tH = vH;
+              tW = Math.round(vH * (16 / 9));
+            }
+          }
+
+          if (previewCanvas.width !== tW || previewCanvas.height !== tH) {
+            previewCanvas.width = tW;
+            previewCanvas.height = tH;
+          }
+
+          const sx = (vW - tW) / 2;
+          const sy = (vH - tH) / 2;
+          previewCtx.drawImage(preview, sx, sy, tW, tH, 0, 0, tW, tH);
+        }
+      }, 1000 / previewFps);
+
+      previewStream.getVideoTracks()[0].addEventListener('ended', () => {
+        stopLivePreview();
+      });
+    } catch (_) {}
+  }
+
+  function stopLivePreview() {
+    if (previewRenderInterval) {
+      clearInterval(previewRenderInterval);
+      previewRenderInterval = null;
+    }
+    if (previewStream && !isRecordingActive) {
+      previewStream.getTracks().forEach(t => t.stop());
+      previewStream = null;
+      preview.srcObject = null;
+      previewEmpty.style.display = 'flex';
+      previewCtx.clearRect(0, 0, previewCanvas.width, previewCanvas.height);
+    }
+  }
+
+  async function restartLivePreview() {
+    stopLivePreview();
+    await startLivePreview();
+  }
+
+  sourceSeg.addEventListener('click', async (e) => {
+    const btn = e.target.closest('button');
+    if (!btn) return;
+
+    [...sourceSeg.children].forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+
+    selectedSource = btn.dataset.src;
+    updateSysAudioHint();
+
+    if (selectedSource === 'monitor') {
+      try {
+        await window.electronAPI.selectMonitor();
+        await restartLivePreview();
+      } catch (error) { console.error(error); }
+    }
+
+    if (selectedSource === 'window') {
+        const windowModal = document.getElementById('windowModal');
+        const windowList = document.getElementById('windowList');
+
+        windowList.innerHTML = 'Pencereler yükleniyor...';
+        windowModal.style.display = 'flex';
+
+        try {
+            const windows = await window.electronAPI.getWindows();
+            windowList.innerHTML = '';
+
+            if (windows.length === 0) {
+              windowList.innerHTML = 'Açık pencere bulunamadı.';
+              return;
+            }
+
+            windows.forEach(win => {
+                const item = document.createElement('button');
+                item.textContent = win.name;
+                item.style.display = 'block';
+                item.style.width = '100%';
+                item.style.margin = '6px 0';
+                item.style.padding = '8px';
+                item.style.background = 'var(--panel-2)';
+                item.style.color = 'var(--text)';
+                item.style.border = '1px solid var(--line)';
+                item.style.borderRadius = '6px';
+                item.style.cursor = 'pointer';
+
+                item.addEventListener('click', async () => {
+                    await window.electronAPI.selectWindow(win.id);
+                    windowModal.style.display = 'none';
+                    await restartLivePreview();
+                });
+
+                windowList.appendChild(item);
+            });
+
+        } catch (error) {
+            windowList.innerHTML = 'Pencereler alınamadı.';
+            console.error(error);
+        }
+    }
+  });
+
+  document.getElementById('closeWindowModal').addEventListener('click', () => {
+    document.getElementById('windowModal').style.display = 'none';
+  });
+
+  updateSysAudioHint();
+
+  function getSavedSettings(){
+    try {
+      return JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}') || {};
+    } catch (_) {
+      return {};
+    }
+  }
+
+  function saveSettings(){
+    try {
+      const currentFormat = supportedFormats[Number(formatSelect.value)] || null;
+      localStorage.setItem(SETTINGS_KEY, JSON.stringify({
+        micEnabled: micToggle.checked,
+        systemAudioEnabled: sysAudioToggle.checked,
+        micVolume: micVolume.value,
+        systemVolume: sysVolume.value,
+        quality: qualitySelect.value,
+        aspectRatio: aspectRatioSelect.value,
+        formatMime: currentFormat ? currentFormat.mime : '',
+        micDeviceId: micDeviceSelect.value || savedMicDeviceId || '',
+        fpsMode: fpsSelect.value,
+        customFps: customFpsInput.value
+      }));
+    } catch (_) {}
+  }
+
+  const initialSettings = getSavedSettings();
+  if (typeof initialSettings.micEnabled === 'boolean') micToggle.checked = initialSettings.micEnabled;
+  if (typeof initialSettings.systemAudioEnabled === 'boolean') sysAudioToggle.checked = initialSettings.systemAudioEnabled;
+  if (initialSettings.micVolume != null) micVolume.value = initialSettings.micVolume;
+  if (initialSettings.systemVolume != null) sysVolume.value = initialSettings.systemVolume;
+  if (['low','mid','high'].includes(initialSettings.quality)) qualitySelect.value = initialSettings.quality;
+  if (['default','tiktok','youtube'].includes(initialSettings.aspectRatio)) {
+    aspectRatioSelect.value = initialSettings.aspectRatio;
+    updatePreviewFrameRatio(aspectRatioSelect.value);
+  }
+  if (['normal','low','custom'].includes(initialSettings.fpsMode)) {
+    fpsSelect.value = initialSettings.fpsMode;
+    if (initialSettings.fpsMode === 'custom') customFpsRow.style.display = 'block';
+  }
+  if (initialSettings.customFps) customFpsInput.value = initialSettings.customFps;
+
+  savedMicDeviceId = initialSettings.micDeviceId || '';
+
+  sysVolumeRow.classList.toggle('show', sysAudioToggle.checked);
+  micDeviceRow.style.display = micToggle.checked ? 'flex' : 'none';
+  micVolumeRow.classList.toggle('show', micToggle.checked);
+
+  micToggle.addEventListener('change', saveSettings);
+  sysAudioToggle.addEventListener('change', saveSettings);
+  micVolume.addEventListener('change', saveSettings);
+  sysVolume.addEventListener('change', saveSettings);
+  qualitySelect.addEventListener('change', saveSettings);
+  aspectRatioSelect.addEventListener('change', saveSettings);
+  formatSelect.addEventListener('change', saveSettings);
+  fpsSelect.addEventListener('change', saveSettings);
+  customFpsInput.addEventListener('input', saveSettings);
+
+  micDeviceSelect.addEventListener('change', () => {
+    savedMicDeviceId = micDeviceSelect.value || '';
+    saveSettings();
+  });
+
+  async function populateMicDevices(){
+    micDeviceSelect.disabled = true;
+    micDeviceSelect.innerHTML = '<option value="">Mikrofonlar listeleniyor…</option>';
+    try {
+      const tempStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      tempStream.getTracks().forEach(t => t.stop());
+
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const mics = devices.filter(d => d.kind === 'audioinput');
+
+      micDeviceSelect.innerHTML = '';
+      if (mics.length === 0) {
+        const opt = document.createElement('option');
+        opt.value = '';
+        opt.textContent = 'Mikrofon bulunamadı';
+        micDeviceSelect.appendChild(opt);
+      } else {
+        mics.forEach((m, i) => {
+          const opt = document.createElement('option');
+          opt.value = m.deviceId;
+          opt.textContent = m.label || ('Mikrofon ' + (i + 1));
+          micDeviceSelect.appendChild(opt);
+        });
+      }
+      if (savedMicDeviceId && [...micDeviceSelect.options].some(o => o.value === savedMicDeviceId)) {
+        micDeviceSelect.value = savedMicDeviceId;
+      }
+      micDeviceSelect.disabled = false;
+      saveSettings();
+    } catch (err) {
+      micDeviceSelect.innerHTML = '<option value="">Mikrofona izin verilmedi</option>';
+    }
+  }
+
+  function updateVolumeLabels(){
+    micVolumeValue.textContent = micVolume.value + '%';
+    sysVolumeValue.textContent = sysVolume.value + '%';
+  }
+
+  micVolume.addEventListener('input', updateVolumeLabels);
+  sysVolume.addEventListener('input', updateVolumeLabels);
+  sysAudioToggle.addEventListener('change', () => {
+    sysVolumeRow.classList.toggle('show', sysAudioToggle.checked);
+  });
+  updateVolumeLabels();
+
+  micToggle.addEventListener('change', () => {
+    if (micToggle.checked) {
+      micDeviceRow.style.display = 'flex';
+      micVolumeRow.classList.add('show');
+      populateMicDevices();
+    } else {
+      micDeviceRow.style.display = 'none';
+      micVolumeRow.classList.remove('show');
+    }
+  });
+
+  if (micToggle.checked) populateMicDevices();
+
+  const candidateFormats = [
+    { label: 'MP4 (H.264 + AAC)', mime: 'video/mp4;codecs="avc1.424028,mp4a.40.2"', ext: 'mp4' },
+    { label: 'MP4 (otomatik codec)', mime: 'video/mp4', ext: 'mp4' },
+    { label: 'WebM (VP9 + Opus)', mime: 'video/webm;codecs="vp9,opus"', ext: 'webm' },
+    { label: 'WebM (VP8 + Opus)', mime: 'video/webm;codecs="vp8,opus"', ext: 'webm' },
+    { label: 'WebM (otomatik codec)', mime: 'video/webm', ext: 'webm' },
+  ];
+  let supportedFormats = [];
+  if (window.MediaRecorder && MediaRecorder.isTypeSupported) {
+    supportedFormats = candidateFormats.filter(f => MediaRecorder.isTypeSupported(f.mime));
+  }
+  if (supportedFormats.length === 0) {
+    supportedFormats = [{ label: 'Tarayıcı desteği bulunamadı', mime: '', ext: 'webm' }];
+  }
+  supportedFormats.forEach((f, i) => {
+    const opt = document.createElement('option');
+    opt.value = i;
+    opt.textContent = f.label;
+    formatSelect.appendChild(opt);
+  });
+  const savedFormatMime = initialSettings.formatMime || '';
+  if (savedFormatMime) {
+    const savedFormatIndex = supportedFormats.findIndex(f => f.mime === savedFormatMime);
+    if (savedFormatIndex >= 0) formatSelect.value = String(savedFormatIndex);
+  }
+
+  function updateFormatHint(){
+    const f = supportedFormats[formatSelect.value];
+    if (!f || !f.mime) {
+      formatHint.textContent = 'Uygun kayıt formatı bulunamadı.';
+    } else if (f.ext === 'mp4') {
+      formatHint.textContent = 'Kayıt doğrudan .mp4 olarak kaydedilecek.';
+    } else {
+      formatHint.textContent = 'MP4 desteklenmiyorsa kayıt WebM olarak oluşturulur.';
+    }
+  }
+  formatSelect.addEventListener('change', updateFormatHint);
+  updateFormatHint();
+
+  const qualityMap = {
+    low:  { bitrate: 1_500_000 },
+    mid:  { bitrate: 3_000_000 },
+    high: { bitrate: 6_000_000 },
+  };
+
+  function fmtTime(totalSeconds){
+    const m = String(Math.floor(totalSeconds / 60)).padStart(2, '0');
+    const s = String(totalSeconds % 60).padStart(2, '0');
+    return m + ':' + s;
+  }
+
+  function setStatus(state){
+    statusDot.className = 'dot';
+    if (state === 'recording') { statusDot.classList.add('recording'); statusText.textContent = 'Kaydediliyor'; }
+    else if (state === 'paused') { statusDot.classList.add('paused'); statusText.textContent = 'Duraklatıldı'; }
+    else if (state === 'idle') { statusText.textContent = 'Hazır'; }
+  }
+
+  function showError(msg){
+    errorBox.textContent = msg;
+    errorBox.classList.add('show');
+  }
+  function clearError(){
+    errorBox.classList.remove('show');
+    errorBox.textContent = '';
+  }
+
+  function startTimer(){
+    secondsElapsed = 0;
+    timerEl.textContent = fmtTime(0);
+    timerInterval = setInterval(() => {
+      secondsElapsed++;
+      timerEl.textContent = fmtTime(secondsElapsed);
+    }, 1000);
+  }
+  function stopTimer(){
+    clearInterval(timerInterval);
+    timerInterval = null;
+  }
+
+  function sleep(ms){
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  async function requestStartRecording(){
+    if (isCountingDown || (recorder && recorder.state !== 'inactive')) return;
+
+    isCountingDown = true;
+    clearError();
+    btnStart.disabled = true;
+    sourceSeg.querySelectorAll('button').forEach(b => b.disabled = true);
+
+    previewEmpty.style.display = 'none';
+    countdownOverlay.style.display = 'flex';
+
+    try {
+      for (let n = 3; n >= 1; n--) {
+        countdownOverlay.textContent = String(n);
+        statusText.textContent = 'Kayıt ' + n + ' saniye sonra başlayacak';
+        await sleep(1000);
+      }
+
+      countdownOverlay.textContent = 'KAYIT';
+      await sleep(220);
+    } finally {
+      countdownOverlay.style.display = 'none';
+      countdownOverlay.textContent = '';
+      isCountingDown = false;
+    }
+
+    await startRecording();
+
+    if (!recorder || recorder.state === 'inactive') {
+      btnStart.disabled = false;
+      sourceSeg.querySelectorAll('button').forEach(b => b.disabled = false);
+      previewEmpty.style.display = 'flex';
+      setStatus('idle');
+    }
+  }
+
+  async function startRecording(){
+    clearError();
+    downloadBox.classList.remove('show');
+    document.getElementById('diagText').textContent = '';
+    chunks = [];
+    isRecordingActive = true;
+
+    if (previewRenderInterval) {
+      clearInterval(previewRenderInterval);
+      previewRenderInterval = null;
+    }
+    if (previewStream) {
+      previewStream.getTracks().forEach(t => t.stop());
+      previewStream = null;
+    }
+
+    const currentFps = getTargetFps();
+
+    try {
+      mediaStream = await navigator.mediaDevices.getDisplayMedia({
+        video: { frameRate: { ideal: currentFps, max: currentFps } },
+        audio: sysAudioToggle.checked
+      });
+    } catch (err) {
+      isRecordingActive = false;
+      showError('Ekran/pencere paylaşımı başlatılamadı: ' + (err.message || err.name));
+      return;
+    }
+
+    mediaStream.getVideoTracks()[0].addEventListener('ended', () => {
+      if (recorder && recorder.state !== 'inactive') stopRecording();
+    });
+
+    const videoTrack = mediaStream.getVideoTracks()[0];
+    const settings = videoTrack.getSettings();
+    const srcWidth = settings.width || 1920;
+    const srcHeight = settings.height || 1080;
+
+    let targetWidth = srcWidth;
+    let targetHeight = srcHeight;
+    const aspectChoice = aspectRatioSelect.value;
+
+    if (aspectChoice === 'tiktok') {
+      targetHeight = srcHeight;
+      targetWidth = Math.round(srcHeight * (9 / 16));
+      if (targetWidth > srcWidth) {
+        targetWidth = srcWidth;
+        targetHeight = Math.round(srcWidth * (16 / 9));
+      }
+    } else if (aspectChoice === 'youtube') {
+      targetWidth = srcWidth;
+      targetHeight = Math.round(srcWidth * (9 / 16));
+      if (targetHeight > srcHeight) {
+        targetHeight = srcHeight;
+        targetWidth = Math.round(srcHeight * (16 / 9));
+      }
+    }
+
+    const canvas = document.createElement('canvas');
+    canvas.width = targetWidth;
+    canvas.height = targetHeight;
+    const ctx = canvas.getContext('2d', { alpha: false, desynchronized: true });
+
+    const hiddenVideo = document.createElement('video');
+    hiddenVideo.srcObject = new MediaStream([videoTrack]);
+    hiddenVideo.muted = true;
+    await hiddenVideo.play().catch(() => {});
+
+    // DÜZELTME: kayıt sırasında önizleme canvas'ının boyutu da güncelleniyor.
+    if (previewCanvas.width !== targetWidth || previewCanvas.height !== targetHeight) {
+      previewCanvas.width = targetWidth;
+      previewCanvas.height = targetHeight;
+    }
+
+    const localCanvasInterval = setInterval(() => {
+      if (hiddenVideo.readyState >= 2) {
+        const vW = hiddenVideo.videoWidth || srcWidth;
+        const vH = hiddenVideo.videoHeight || srcHeight;
+        const sx = (vW - targetWidth) / 2;
+        const sy = (vH - targetHeight) / 2;
+        ctx.drawImage(hiddenVideo, sx, sy, targetWidth, targetHeight, 0, 0, targetWidth, targetHeight);
+
+        // Kayıt sırasında canlı önizleme
+        previewCtx.drawImage(canvas, 0, 0);
+      }
+    }, 1000 / currentFps);
+
+    // DÜZELTME: window._activeCanvasInterval yerine modül değişkeni
+    activeCanvasInterval = localCanvasInterval;
+
+    const canvasStream = canvas.captureStream(currentFps);
+    const croppedVideoTrack = canvasStream.getVideoTracks()[0];
+
+    if (micToggle.checked) {
+      try {
+        const usedConstraints = micDeviceSelect.value
+          ? { deviceId: { exact: micDeviceSelect.value } }
+          : true;
+        try {
+          micStream = await navigator.mediaDevices.getUserMedia({ audio: usedConstraints });
+        } catch (_) {
+          micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        }
+      } catch (err) {
+        showError('Mikrofona erişilemedi: ' + (err.message || err.name));
+      }
+    }
+
+    const systemAudioTracks = mediaStream.getAudioTracks();
+    const micAudioTracks = micStream ? micStream.getAudioTracks() : [];
+    const systemGainValue = Number(sysVolume.value) / 100;
+    const micGainValue = Number(micVolume.value) / 100;
+    let combinedStream;
+
+    try {
+      audioContext = new AudioContext({ latencyHint: 'playback' });
+      mixedAudioDestination = audioContext.createMediaStreamDestination();
+
+      if (systemAudioTracks.length > 0) {
+        const sysSrc = audioContext.createMediaStreamSource(new MediaStream(systemAudioTracks));
+        const sysGain = audioContext.createGain();
+        sysGain.gain.value = systemGainValue;
+        sysSrc.connect(sysGain).connect(mixedAudioDestination);
+      }
+
+      if (micAudioTracks.length > 0) {
+        const micSrc = audioContext.createMediaStreamSource(new MediaStream(micAudioTracks));
+        const micGain = audioContext.createGain();
+        micGain.gain.value = micGainValue;
+        micSrc.connect(micGain).connect(mixedAudioDestination);
+      }
+
+      combinedStream = new MediaStream([
+        croppedVideoTrack,
+        ...mixedAudioDestination.stream.getAudioTracks()
+      ]);
+    } catch (_) {
+      combinedStream = new MediaStream([
+        croppedVideoTrack,
+        ...systemAudioTracks,
+        ...micAudioTracks
+      ]);
+    }
+
+    previewEmpty.style.display = 'none';
+
+    const chosen = supportedFormats[formatSelect.value];
+    chosenMime = chosen.mime;
+    chosenExt = chosen.ext;
+
+    const q = qualityMap[qualitySelect.value];
+    const options = {};
+    if (chosenMime) options.mimeType = chosenMime;
+    options.videoBitsPerSecond = q.bitrate;
+    options.audioBitsPerSecond = 128000;
+
+    try {
+      recorder = new MediaRecorder(combinedStream, options);
+    } catch (err) {
+      isRecordingActive = false;
+      showError('Kayıt kaydedici oluşturulamadı: ' + (err.message || err.name));
+      cleanupStreams();
+      return;
+    }
+
+    try {
+      const recoveryResult = await window.electronAPI.startRecovery(chosenExt);
+      recoveryActive = !!(recoveryResult && recoveryResult.ok);
+    } catch (_) {
+      recoveryActive = false;
+    }
+
+    recorder.ondataavailable = (e) => {
+      if (e.data && e.data.size > 0) {
+        chunks.push(e.data);
+        if (recoveryActive) {
+          e.data.arrayBuffer()
+            .then(buffer => window.electronAPI.appendRecoveryChunk(buffer))
+            .catch(() => {});
+        }
+      }
+    };
+
+    recorder.onstop = () => {
+      const blob = new Blob(chunks, { type: chosenMime || 'video/webm' });
+      const url = URL.createObjectURL(blob);
+      downloadLink.href = url;
+
+      const now = new Date();
+      const stamp = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0')
+        + '_' + String(now.getHours()).padStart(2,'0') + '-' + String(now.getMinutes()).padStart(2,'0');
+      fileNameInput.value = 'kayit_' + stamp;
+      downloadLink.download = fileNameInput.value + '.' + chosenExt;
+
+      const sizeMB = (blob.size / (1024*1024)).toFixed(1);
+      downloadMeta.textContent = 'Kayıt hazır — ' + fmtTime(secondsElapsed) + ' · ' + sizeMB + ' MB';
+      downloadBox.classList.add('show');
+      cleanupStreams();
+    };
+
+    saveSettings();
+    recorder.start(1000);
+    startTimer();
+    setStatus('recording');
+
+    btnStart.disabled = true;
+    btnPause.disabled = false;
+    btnPause.textContent = 'Duraklat';
+    btnStop.disabled = false;
+    sourceSeg.querySelectorAll('button').forEach(b => b.disabled = true);
+    micToggle.disabled = true;
+    sysAudioToggle.disabled = true;
+    qualitySelect.disabled = true;
+    aspectRatioSelect.disabled = true;
+    formatSelect.disabled = true;
+    fpsSelect.disabled = true;
+    customFpsInput.disabled = true;
+  }
+
+  function togglePause(){
+    if (!recorder) return;
+    if (recorder.state === 'recording') {
+      recorder.pause();
+      stopTimer();
+      setStatus('paused');
+      btnPause.textContent = 'Devam Et';
+    } else if (recorder.state === 'paused') {
+      recorder.resume();
+      timerInterval = setInterval(() => {
+        secondsElapsed++;
+        timerEl.textContent = fmtTime(secondsElapsed);
+      }, 1000);
+      setStatus('recording');
+      btnPause.textContent = 'Duraklat';
+    }
+  }
+
+  function stopRecording(){
+    // DÜZELTME: modül değişkeni kullan
+    if (activeCanvasInterval) {
+      clearInterval(activeCanvasInterval);
+      activeCanvasInterval = null;
+    }
+    if (recorder && recorder.state !== 'inactive') {
+      recorder.stop();
+    }
+    stopTimer();
+    setStatus('idle');
+    isRecordingActive = false;
+
+    btnStart.disabled = false;
+    btnPause.disabled = true;
+    btnStop.disabled = true;
+    sourceSeg.querySelectorAll('button').forEach(b => b.disabled = false);
+    micToggle.disabled = false;
+    sysAudioToggle.disabled = false;
+    qualitySelect.disabled = false;
+    aspectRatioSelect.disabled = false;
+    formatSelect.disabled = false;
+    fpsSelect.disabled = false;
+    customFpsInput.disabled = false;
+
+    previewEmpty.style.display = 'flex';
+    previewCtx.clearRect(0, 0, previewCanvas.width, previewCanvas.height);
+    startLivePreview();
+  }
+
+  function cleanupStreams(){
+    if (mediaStream) { mediaStream.getTracks().forEach(t => t.stop()); mediaStream = null; }
+    if (micStream) { micStream.getTracks().forEach(t => t.stop()); micStream = null; }
+    if (mixedAudioDestination) { mixedAudioDestination = null; }
+    if (audioContext) {
+      audioContext.close().catch(() => {});
+      audioContext = null;
+    }
+  }
+
+  btnStart.addEventListener('click', requestStartRecording);
+  btnPause.addEventListener('click', togglePause);
+  btnStop.addEventListener('click', stopRecording);
+
+  fileNameInput.addEventListener('input', () => {
+    const clean = (fileNameInput.value || 'kayit').trim() || 'kayit';
+    downloadLink.download = clean + '.' + chosenExt;
+  });
+
+  downloadLink.addEventListener('click', () => {
+    if (!recoveryActive) return;
+    setTimeout(async () => {
+      try {
+        await window.electronAPI.finishRecovery();
+        recoveryActive = false;
+      } catch (_) {}
+    }, 1200);
+  });
+
+  openRecoveryFolder.addEventListener('click', async () => {
+    try { await window.electronAPI.openRecoveryFolder(); } catch (_) {}
+  });
+
+  async function checkForRecovery(){
+    try {
+      const info = await window.electronAPI.getRecoveryStatus();
+      if (info && info.hasRecovery && info.latest) {
+        recoveryText.textContent = 'Önceki kayıttan kurtarma dosyası bulundu: ' + info.latest.name;
+        recoveryBox.classList.add('show');
+      }
+    } catch (_) {}
+  }
+
+  checkForRecovery();
+  startLivePreview();
+})();
+</script>
+
+</body>
+</html>
