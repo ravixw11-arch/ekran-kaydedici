@@ -12,7 +12,7 @@
   "license": "ISC",
   "type": "commonjs",
   "devDependencies": {
-    "electron": "^44.1.1",
+    "electron": "^45.0.0",
     "electron-builder": "^26.15.3"
   },
   "build": {

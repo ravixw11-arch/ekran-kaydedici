@@ -25,11 +25,12 @@
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     font-size: 15px;
   }
-  body { min-height: 100vh; display: flex; flex-direction: column; }
+  body { height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
 
   header {
     padding: 18px 24px 14px;
     border-bottom: 1px solid var(--line);
+    flex-shrink: 0;
   }
   header h1 {
     margin: 0;
@@ -48,16 +49,18 @@
     display: grid;
     grid-template-columns: 340px 1fr;
     gap: 0;
+    overflow: hidden; 
   }
   @media (max-width: 800px) {
     main { grid-template-columns: 1fr; }
+    body { overflow: auto; height: auto; }
   }
 
   .panel {
     padding: 20px;
     border-right: 1px solid var(--line);
     background: var(--panel);
-    overflow-y: auto;
+    overflow-y: auto; 
   }
   @media (max-width: 800px) {
     .panel { border-right: none; border-bottom: 1px solid var(--line); }
@@ -154,7 +157,7 @@
     font-variant-numeric: tabular-nums;
   }
 
-  select, input[type="number"] {
+  select, input[type="number"], input[type="text"].shortcut-input {
     width: 100%;
     background: var(--panel-2);
     color: var(--text);
@@ -164,20 +167,36 @@
     font-size: 13px;
     cursor: pointer;
   }
+  input[type="text"].shortcut-input {
+    width: 120px;
+    text-align: center;
+    font-weight: bold;
+    cursor: pointer;
+    border-color: var(--accent);
+  }
+  input[type="text"].shortcut-input:focus {
+    outline: none;
+    background: var(--accent-dim);
+  }
   select:disabled, input[type="number"]:disabled { opacity: .5; cursor: not-allowed; }
 
   .stage {
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
-    padding: 24px;
-    gap: 18px;
+    justify-content: flex-start; 
+    padding: 20px;
+    gap: 15px;
+    overflow-y: auto;
+    height: 100%;
   }
 
   .preview-frame {
     width: 100%;
-    max-width: 720px;
+    max-width: 100%; 
+    height: auto; 
+    max-height: calc(100vh - 220px); 
+    flex-shrink: 0; 
     aspect-ratio: 16/9;
     background: #000;
     border-radius: 10px;
@@ -189,16 +208,11 @@
     justify-content: center;
     transition: aspect-ratio 0.2s ease;
   }
-  .preview-frame.ratio-tiktok {
-    aspect-ratio: 9/16;
-    max-height: 480px;
-  }
-  .preview-frame.ratio-youtube {
-    aspect-ratio: 16/9;
-  }
-  .preview-frame.ratio-default {
-    aspect-ratio: 16/9;
-  }
+  
+  .preview-frame.ratio-tiktok { aspect-ratio: 9/16; max-height: 65vh; width: auto; max-width: 100%; }
+  .preview-frame.ratio-youtube { aspect-ratio: 16/9; width: 100%; }
+  .preview-frame.ratio-default { aspect-ratio: 16/9; width: 100%; }
+  
   .preview-frame video, .preview-frame canvas {
     width: 100%; height: 100%;
     object-fit: contain;
@@ -216,6 +230,7 @@
     align-items: center;
     gap: 10px;
     font-variant-numeric: tabular-nums;
+    flex-shrink: 0;
   }
   .dot {
     width: 9px; height: 9px;
@@ -224,10 +239,7 @@
   }
   .dot.recording { background: var(--danger); animation: pulse 1.2s infinite; }
   .dot.paused { background: #e0b04f; animation: none; }
-  @keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: .35; }
-  }
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
   .timer { font-size: 15px; color: var(--text); }
   .status-text { font-size: 13px; color: var(--muted); }
 
@@ -236,6 +248,7 @@
     gap: 10px;
     flex-wrap: wrap;
     justify-content: center;
+    flex-shrink: 0;
   }
   button.action {
     border: none;
@@ -268,6 +281,9 @@
     justify-content: space-between;
     gap: 12px;
     flex-wrap: wrap;
+    margin-top: 10px;
+    margin-bottom: 20px;
+    flex-shrink: 0;
   }
   .download-box.show { display: flex; }
   .download-box .meta { font-size: 13px; color: var(--muted); }
@@ -291,6 +307,7 @@
     padding: 12px 14px;
     font-size: 13px;
     display: none;
+    flex-shrink: 0;
   }
   .error-box.show { display: block; }
 
@@ -300,6 +317,7 @@
     color: var(--muted);
     padding: 14px;
     border-top: 1px solid var(--line);
+    flex-shrink: 0;
   }
 
   .countdown-overlay {
@@ -329,6 +347,7 @@
     align-items: center;
     justify-content: space-between;
     gap: 12px;
+    flex-shrink: 0;
   }
   .recovery-box.show { display: flex; }
   .recovery-box button {
@@ -361,6 +380,19 @@
 
 <main>
   <div class="panel">
+    
+    <div class="group">
+      <div class="group-label" style="color: var(--accent);">Kısayollar (Kutuya tıklayıp tuşa basın)</div>
+      <div class="toggle-row">
+        <div class="label">Başlat / Durdur</div>
+        <input type="text" id="shortcutStartStop" class="shortcut-input" readonly placeholder="F9">
+      </div>
+      <div class="toggle-row" style="border:none;">
+        <div class="label">Duraklat / Devam</div>
+        <input type="text" id="shortcutPauseResume" class="shortcut-input" readonly placeholder="F10">
+      </div>
+      <div class="hint" style="margin-top:4px;">Oyun içindeyken bile çalışır.</div>
+    </div>
 
     <div class="group">
       <div class="group-label">Kaydedilecek alan</div>
@@ -370,7 +402,7 @@
       </div>
       <div class="toggle-row" style="border:none; padding-top:8px;">
         <div>
-          <div class="hint">"Oyun / Pencere" seçildiğinde pencere çerçeveleri hariç tutulur, yalnızca içerik kaydedilir.</div>
+          <div class="hint">"Oyun / Pencere" seçildiğinde üstteki başlık çubuğu gizlenir, yalnızca içerik kaydedilir.</div>
         </div>
       </div>
     </div>
@@ -451,7 +483,7 @@
 
   </div>
 
-  <div class="stage">
+  <div class="stage" id="stage">
 
     <div class="preview-frame ratio-default" id="previewFrame">
       <video id="preview" autoplay muted playsinline style="display:none;"></video>
@@ -519,6 +551,9 @@
   const customFpsRow = document.getElementById('customFpsRow');
   const customFpsInput = document.getElementById('customFpsInput');
 
+  const shortcutStartStop = document.getElementById('shortcutStartStop');
+  const shortcutPauseResume = document.getElementById('shortcutPauseResume');
+
   const preview = document.getElementById('preview');
   const previewCanvas = document.getElementById('previewCanvas');
   const previewCtx = previewCanvas.getContext('2d', { alpha: false, desynchronized: true });
@@ -555,8 +590,6 @@
   let previewStream = null;
   let isRecordingActive = false;
   let previewRenderInterval = null;
-
-  // DÜZELTME: window._activeCanvasInterval yerine modül seviyesinde değişken.
   let activeCanvasInterval = null;
 
   const SETTINGS_KEY = 'ravix_recorder_settings_v9';
@@ -620,8 +653,6 @@
       previewEmpty.style.display = 'none';
 
       if (previewRenderInterval) clearInterval(previewRenderInterval);
-
-      // HAFİF LAPTOP OPTİMİZASYONU: Boşta önizleme FPS'i 20 ile sınırlandı.
       const previewFps = Math.min(currentFps, 20);
 
       previewRenderInterval = setInterval(() => {
@@ -632,10 +663,17 @@
 
           let tW = vW;
           let tH = vH;
+          let syOffset = 0;
+
+          // Pencere modundaysa, üstteki çubuğu gizlemek için 32px aşağıdan kırpmaya başla
+          if (selectedSource === 'window') {
+            syOffset = 32; 
+            tH = vH - syOffset;
+          }
 
           if (aspectChoice === 'tiktok') {
-            tH = vH;
-            tW = Math.round(vH * (9 / 16));
+            tH = vH - syOffset;
+            tW = Math.round(tH * (9 / 16));
             if (tW > vW) {
               tW = vW;
               tH = Math.round(vW * (16 / 9));
@@ -643,9 +681,9 @@
           } else if (aspectChoice === 'youtube') {
             tW = vW;
             tH = Math.round(vW * (9 / 16));
-            if (tH > vH) {
-              tH = vH;
-              tW = Math.round(vH * (16 / 9));
+            if (tH > vH - syOffset) {
+              tH = vH - syOffset;
+              tW = Math.round(tH * (16 / 9));
             }
           }
 
@@ -655,7 +693,7 @@
           }
 
           const sx = (vW - tW) / 2;
-          const sy = (vH - tH) / 2;
+          const sy = (vH - tH) / 2 + syOffset; // Offset eklendi
           previewCtx.drawImage(preview, sx, sy, tW, tH, 0, 0, tW, tH);
         }
       }, 1000 / previewFps);
@@ -774,7 +812,9 @@
         formatMime: currentFormat ? currentFormat.mime : '',
         micDeviceId: micDeviceSelect.value || savedMicDeviceId || '',
         fpsMode: fpsSelect.value,
-        customFps: customFpsInput.value
+        customFps: customFpsInput.value,
+        shortcutStartStop: shortcutStartStop.value,
+        shortcutPauseResume: shortcutPauseResume.value
       }));
     } catch (_) {}
   }
@@ -796,6 +836,9 @@
   if (initialSettings.customFps) customFpsInput.value = initialSettings.customFps;
 
   savedMicDeviceId = initialSettings.micDeviceId || '';
+
+  shortcutStartStop.value = initialSettings.shortcutStartStop || 'F9';
+  shortcutPauseResume.value = initialSettings.shortcutPauseResume || 'F10';
 
   sysVolumeRow.classList.toggle('show', sysAudioToggle.checked);
   micDeviceRow.style.display = micToggle.checked ? 'flex' : 'none';
@@ -1035,11 +1078,18 @@
 
     let targetWidth = srcWidth;
     let targetHeight = srcHeight;
+    let syOffset = 0;
     const aspectChoice = aspectRatioSelect.value;
 
+    // Pencere modundaysa, üstteki çubuğu gizlemek için 32px aşağıdan kırpmaya başla
+    if (selectedSource === 'window') {
+      syOffset = 32;
+      targetHeight = srcHeight - syOffset;
+    }
+
     if (aspectChoice === 'tiktok') {
-      targetHeight = srcHeight;
-      targetWidth = Math.round(srcHeight * (9 / 16));
+      targetHeight = srcHeight - syOffset;
+      targetWidth = Math.round(targetHeight * (9 / 16));
       if (targetWidth > srcWidth) {
         targetWidth = srcWidth;
         targetHeight = Math.round(srcWidth * (16 / 9));
@@ -1047,9 +1097,9 @@
     } else if (aspectChoice === 'youtube') {
       targetWidth = srcWidth;
       targetHeight = Math.round(srcWidth * (9 / 16));
-      if (targetHeight > srcHeight) {
-        targetHeight = srcHeight;
-        targetWidth = Math.round(srcHeight * (16 / 9));
+      if (targetHeight > srcHeight - syOffset) {
+        targetHeight = srcHeight - syOffset;
+        targetWidth = Math.round(targetHeight * (16 / 9));
       }
     }
 
@@ -1063,7 +1113,6 @@
     hiddenVideo.muted = true;
     await hiddenVideo.play().catch(() => {});
 
-    // DÜZELTME: kayıt sırasında önizleme canvas'ının boyutu da güncelleniyor.
     if (previewCanvas.width !== targetWidth || previewCanvas.height !== targetHeight) {
       previewCanvas.width = targetWidth;
       previewCanvas.height = targetHeight;
@@ -1074,15 +1123,12 @@
         const vW = hiddenVideo.videoWidth || srcWidth;
         const vH = hiddenVideo.videoHeight || srcHeight;
         const sx = (vW - targetWidth) / 2;
-        const sy = (vH - targetHeight) / 2;
+        const sy = (vH - targetHeight) / 2 + syOffset; // Offset eklendi
         ctx.drawImage(hiddenVideo, sx, sy, targetWidth, targetHeight, 0, 0, targetWidth, targetHeight);
-
-        // Kayıt sırasında canlı önizleme
         previewCtx.drawImage(canvas, 0, 0);
       }
     }, 1000 / currentFps);
 
-    // DÜZELTME: window._activeCanvasInterval yerine modül değişkeni
     activeCanvasInterval = localCanvasInterval;
 
     const canvasStream = canvas.captureStream(currentFps);
@@ -1192,6 +1238,7 @@
       const sizeMB = (blob.size / (1024*1024)).toFixed(1);
       downloadMeta.textContent = 'Kayıt hazır — ' + fmtTime(secondsElapsed) + ' · ' + sizeMB + ' MB';
       downloadBox.classList.add('show');
+
       cleanupStreams();
     };
 
@@ -1233,7 +1280,6 @@
   }
 
   function stopRecording(){
-    // DÜZELTME: modül değişkeni kullan
     if (activeCanvasInterval) {
       clearInterval(activeCanvasInterval);
       activeCanvasInterval = null;
@@ -1305,6 +1351,55 @@
     } catch (_) {}
   }
 
+  function applyShortcuts() {
+    const s1 = shortcutStartStop.value || 'F9';
+    const s2 = shortcutPauseResume.value || 'F10';
+    window.electronAPI.registerShortcuts({ startStop: s1, pauseResume: s2 });
+    saveSettings();
+  }
+
+  function handleShortcutKey(e, inputEl) {
+    e.preventDefault();
+    if (e.key === 'Escape' || e.key === 'Backspace') {
+      inputEl.value = '';
+      applyShortcuts();
+      inputEl.blur();
+      return;
+    }
+    if (['Control', 'Alt', 'Shift', 'Meta'].includes(e.key)) return;
+
+    let keys = [];
+    if (e.ctrlKey) keys.push('CommandOrControl');
+    if (e.altKey) keys.push('Alt');
+    if (e.shiftKey) keys.push('Shift');
+
+    let mainKey = e.key;
+    if (mainKey === ' ') mainKey = 'Space';
+    else if (mainKey.length === 1) mainKey = mainKey.toUpperCase();
+    else if (mainKey.startsWith('Arrow')) mainKey = mainKey.replace('Arrow', '');
+
+    keys.push(mainKey);
+    inputEl.value = keys.join('+');
+    inputEl.blur();
+    applyShortcuts();
+  }
+
+  shortcutStartStop.addEventListener('keydown', (e) => handleShortcutKey(e, shortcutStartStop));
+  shortcutPauseResume.addEventListener('keydown', (e) => handleShortcutKey(e, shortcutPauseResume));
+
+  window.electronAPI.onShortcutAction((action) => {
+    if (action === 'startStop') {
+      if (isRecordingActive || isCountingDown) {
+        stopRecording();
+      } else {
+        requestStartRecording();
+      }
+    } else if (action === 'pauseResume') {
+      if (isRecordingActive) togglePause();
+    }
+  });
+
+  applyShortcuts();
   checkForRecovery();
   startLivePreview();
 })();

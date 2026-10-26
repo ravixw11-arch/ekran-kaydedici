@@ -9,5 +9,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
     appendRecoveryChunk: (arrayBuffer) => ipcRenderer.send('recovery-chunk', arrayBuffer),
     finishRecovery: () => ipcRenderer.invoke('recovery-finish'),
     getRecoveryStatus: () => ipcRenderer.invoke('recovery-status'),
-    openRecoveryFolder: () => ipcRenderer.invoke('open-recovery-folder')
+    openRecoveryFolder: () => ipcRenderer.invoke('open-recovery-folder'),
+
+    // YENİ KISAYOL FONKSİYONLARI
+    registerShortcuts: (shortcuts) => ipcRenderer.invoke('register-shortcuts', shortcuts),
+    onShortcutAction: (callback) => ipcRenderer.on('shortcut-action', (event, action) => callback(action))
 });

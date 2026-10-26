@@ -1,17 +1,18 @@
-const { app, BrowserWindow, desktopCapturer, session, ipcMain, shell } = require('electron');
+const { app, BrowserWindow, desktopCapturer, session, ipcMain, shell, globalShortcut } = require('electron');
 const path = require('path');
 const fs = require('fs');
 
 let selectedWindowId = null;
 let recoveryFilePath = null;
 let recoveryWriteChain = Promise.resolve();
+let mainWindow = null;
 
 function getRecoveryDir() {
     return path.join(app.getPath('videos'), 'Ravix_w1 Kayıt Kurtarma');
 }
 
 function createWindow() {
-    const win = new BrowserWindow({
+    mainWindow = new BrowserWindow({
         width: 1000,
         height: 700,
         icon: path.join(__dirname, 'build', 'icon.ico'),
@@ -21,7 +22,7 @@ function createWindow() {
         }
     });
 
-    win.loadFile('index.html');
+    mainWindow.loadFile('index.html');
 }
 
 app.whenReady().then(() => {
@@ -115,7 +116,6 @@ app.whenReady().then(() => {
             const files = [];
 
             for (const entry of entries) {
-                // DÜZELTME: eskiden "clear" yazıyordu, o bir hata idi. Artık "continue".
                 if (!entry.isFile()) continue;
                 if (!/^kurtarma_.*\.(webm|mp4)$/i.test(entry.name)) continue;
 
@@ -149,6 +149,27 @@ app.whenReady().then(() => {
         return shell.openPath(dir);
     });
 
+    ipcMain.handle('register-shortcuts', (event, shortcuts) => {
+        globalShortcut.unregisterAll(); 
+        let success = true;
+        try {
+            if (shortcuts.startStop) {
+                if (!globalShortcut.register(shortcuts.startStop, () => {
+                    if (mainWindow) mainWindow.webContents.send('shortcut-action', 'startStop');
+                })) success = false;
+            }
+            if (shortcuts.pauseResume) {
+                if (!globalShortcut.register(shortcuts.pauseResume, () => {
+                    if (mainWindow) mainWindow.webContents.send('shortcut-action', 'pauseResume');
+                })) success = false;
+            }
+        } catch (err) {
+            console.error('Kısayol kaydedilemedi:', err);
+            success = false;
+        }
+        return success;
+    });
+
     session.defaultSession.setDisplayMediaRequestHandler(async (request, callback) => {
         try {
             const sources = await desktopCapturer.getSources({
@@ -173,11 +194,8 @@ app.whenReady().then(() => {
                 return;
             }
 
-            // DÜZELTME: Sadece geçerli Electron seçenekleri gönderiliyor.
-            // enableLargerTHANscreenCapture ve cursor seçenekleri Electron tarafından desteklenmiyordu.
             const response = { video: selectedSource };
             if (request.audioRequested) {
-                // Not: Sistem sesi (loopback) sadece Windows'ta çalışır.
                 response.audio = 'loopback';
             }
             callback(response);
@@ -192,6 +210,10 @@ app.whenReady().then(() => {
     app.on('activate', () => {
         if (BrowserWindow.getAllWindows().length === 0) createWindow();
     });
+});
+
+app.on('will-quit', () => {
+    globalShortcut.unregisterAll();
 });
 
 app.on('window-all-closed', () => {
