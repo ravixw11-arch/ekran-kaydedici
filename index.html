@@ -180,6 +180,13 @@
   }
   select:disabled, input[type="number"]:disabled { opacity: .5; cursor: not-allowed; }
 
+  .crop-inputs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-top: 8px;
+  }
+
   .stage {
     display: flex;
     flex-direction: column;
@@ -400,9 +407,37 @@
         <button data-src="monitor" class="active">Bütün Ekran</button>
         <button data-src="window">Oyun / Pencere</button>
       </div>
-      <div class="toggle-row" style="border:none; padding-top:8px;">
-        <div>
-          <div class="hint">"Oyun / Pencere" seçildiğinde üstteki başlık çubuğu gizlenir, yalnızca içerik kaydedilir.</div>
+    </div>
+
+    <div class="group">
+      <div class="group-label">Kayıt Boyutu / Kırpma</div>
+      <select id="aspectRatioSelect">
+        <option value="default" selected>Tam Ekran / Pencere (Varsayılan)</option>
+        <option value="tiktok">TikTok / Shorts (9:16 Dikey)</option>
+        <option value="youtube">YouTube (16:9 Yatay)</option>
+        <option value="custom_crop">Özel Çerçeve (Kırpma)</option>
+      </select>
+      
+      <!-- YENİ: ÖZEL ÇERÇEVE AYARLARI -->
+      <div id="customCropRow" style="display:none; margin-top:12px;">
+        <div class="hint" style="margin-bottom:6px;">Sadece belirli bir alanı kaydetmek için piksel değerleri girin:</div>
+        <div class="crop-inputs">
+          <div>
+            <div class="hint">Sol Boşluk (X)</div>
+            <input type="number" id="cropX" min="0" value="0">
+          </div>
+          <div>
+            <div class="hint">Üst Boşluk (Y)</div>
+            <input type="number" id="cropY" min="0" value="0">
+          </div>
+          <div>
+            <div class="hint">Genişlik</div>
+            <input type="number" id="cropW" min="10" value="1280">
+          </div>
+          <div>
+            <div class="hint">Yükseklik</div>
+            <input type="number" id="cropH" min="10" value="720">
+          </div>
         </div>
       </div>
     </div>
@@ -418,15 +453,6 @@
         <input type="number" id="customFpsInput" min="5" max="60" value="30" placeholder="Örn: 24">
         <div class="hint" style="margin-top:4px;">5 ile 60 arasında bir değer girin.</div>
       </div>
-    </div>
-
-    <div class="group">
-      <div class="group-label">Kayıt En-Boy Oranı</div>
-      <select id="aspectRatioSelect">
-        <option value="default" selected>Tam Ekran / Pencere (Varsayılan)</option>
-        <option value="tiktok">TikTok / Shorts (9:16 Dikey)</option>
-        <option value="youtube">YouTube (16:9 Yatay)</option>
-      </select>
     </div>
 
     <div class="group">
@@ -551,6 +577,12 @@
   const customFpsRow = document.getElementById('customFpsRow');
   const customFpsInput = document.getElementById('customFpsInput');
 
+  const customCropRow = document.getElementById('customCropRow');
+  const cropX = document.getElementById('cropX');
+  const cropY = document.getElementById('cropY');
+  const cropW = document.getElementById('cropW');
+  const cropH = document.getElementById('cropH');
+
   const shortcutStartStop = document.getElementById('shortcutStartStop');
   const shortcutPauseResume = document.getElementById('shortcutPauseResume');
 
@@ -592,7 +624,7 @@
   let previewRenderInterval = null;
   let activeCanvasInterval = null;
 
-  const SETTINGS_KEY = 'ravix_recorder_settings_v9';
+  const SETTINGS_KEY = 'ravix_recorder_settings_v11';
   let savedMicDeviceId = '';
 
   fpsSelect.addEventListener('change', () => {
@@ -627,7 +659,13 @@
   }
 
   aspectRatioSelect.addEventListener('change', () => {
-    updatePreviewFrameRatio(aspectRatioSelect.value);
+    if (aspectRatioSelect.value === 'custom_crop') {
+      customCropRow.style.display = 'block';
+      updatePreviewFrameRatio('default'); // Özel çerçeve kutu oranını değiştirmez
+    } else {
+      customCropRow.style.display = 'none';
+      updatePreviewFrameRatio(aspectRatioSelect.value);
+    }
     saveSettings();
   });
 
@@ -659,32 +697,39 @@
         if (preview.readyState >= 2 && !isRecordingActive) {
           const vW = preview.videoWidth || 1920;
           const vH = preview.videoHeight || 1080;
-          const aspectChoice = aspectRatioSelect.value;
 
           let tW = vW;
           let tH = vH;
-          let syOffset = 0;
+          let sx = 0;
+          let sy = 0;
 
-          // Pencere modundaysa, üstteki çubuğu gizlemek için 32px aşağıdan kırpmaya başla
-          if (selectedSource === 'window') {
-            syOffset = 32; 
-            tH = vH - syOffset;
-          }
-
-          if (aspectChoice === 'tiktok') {
-            tH = vH - syOffset;
-            tW = Math.round(tH * (9 / 16));
-            if (tW > vW) {
+          // Çerçeve veya Oran kontrolü
+          if (aspectRatioSelect.value === 'custom_crop') {
+            tW = parseInt(cropW.value) || vW;
+            tH = parseInt(cropH.value) || vH;
+            sx = parseInt(cropX.value) || 0;
+            sy = parseInt(cropY.value) || 0;
+            if (sx + tW > vW) tW = vW - sx;
+            if (sy + tH > vH) tH = vH - sy;
+          } else {
+            const aspectChoice = aspectRatioSelect.value;
+            if (aspectChoice === 'tiktok') {
+              tH = vH;
+              tW = Math.round(vH * (9 / 16));
+              if (tW > vW) {
+                tW = vW;
+                tH = Math.round(vW * (16 / 9));
+              }
+            } else if (aspectChoice === 'youtube') {
               tW = vW;
-              tH = Math.round(vW * (16 / 9));
+              tH = Math.round(vW * (9 / 16));
+              if (tH > vH) {
+                tH = vH;
+                tW = Math.round(vH * (16 / 9));
+              }
             }
-          } else if (aspectChoice === 'youtube') {
-            tW = vW;
-            tH = Math.round(vW * (9 / 16));
-            if (tH > vH - syOffset) {
-              tH = vH - syOffset;
-              tW = Math.round(tH * (16 / 9));
-            }
+            sx = (vW - tW) / 2;
+            sy = (vH - tH) / 2;
           }
 
           if (previewCanvas.width !== tW || previewCanvas.height !== tH) {
@@ -692,8 +737,6 @@
             previewCanvas.height = tH;
           }
 
-          const sx = (vW - tW) / 2;
-          const sy = (vH - tH) / 2 + syOffset; // Offset eklendi
           previewCtx.drawImage(preview, sx, sy, tW, tH, 0, 0, tW, tH);
         }
       }, 1000 / previewFps);
@@ -814,7 +857,11 @@
         fpsMode: fpsSelect.value,
         customFps: customFpsInput.value,
         shortcutStartStop: shortcutStartStop.value,
-        shortcutPauseResume: shortcutPauseResume.value
+        shortcutPauseResume: shortcutPauseResume.value,
+        cropX: cropX.value,
+        cropY: cropY.value,
+        cropW: cropW.value,
+        cropH: cropH.value
       }));
     } catch (_) {}
   }
@@ -825,15 +872,25 @@
   if (initialSettings.micVolume != null) micVolume.value = initialSettings.micVolume;
   if (initialSettings.systemVolume != null) sysVolume.value = initialSettings.systemVolume;
   if (['low','mid','high'].includes(initialSettings.quality)) qualitySelect.value = initialSettings.quality;
-  if (['default','tiktok','youtube'].includes(initialSettings.aspectRatio)) {
+  if (['default','tiktok','youtube','custom_crop'].includes(initialSettings.aspectRatio)) {
     aspectRatioSelect.value = initialSettings.aspectRatio;
-    updatePreviewFrameRatio(aspectRatioSelect.value);
+    if (initialSettings.aspectRatio === 'custom_crop') {
+      customCropRow.style.display = 'block';
+      updatePreviewFrameRatio('default');
+    } else {
+      updatePreviewFrameRatio(aspectRatioSelect.value);
+    }
   }
   if (['normal','low','custom'].includes(initialSettings.fpsMode)) {
     fpsSelect.value = initialSettings.fpsMode;
     if (initialSettings.fpsMode === 'custom') customFpsRow.style.display = 'block';
   }
   if (initialSettings.customFps) customFpsInput.value = initialSettings.customFps;
+
+  if (initialSettings.cropX) cropX.value = initialSettings.cropX;
+  if (initialSettings.cropY) cropY.value = initialSettings.cropY;
+  if (initialSettings.cropW) cropW.value = initialSettings.cropW;
+  if (initialSettings.cropH) cropH.value = initialSettings.cropH;
 
   savedMicDeviceId = initialSettings.micDeviceId || '';
 
@@ -849,10 +906,14 @@
   micVolume.addEventListener('change', saveSettings);
   sysVolume.addEventListener('change', saveSettings);
   qualitySelect.addEventListener('change', saveSettings);
-  aspectRatioSelect.addEventListener('change', saveSettings);
   formatSelect.addEventListener('change', saveSettings);
   fpsSelect.addEventListener('change', saveSettings);
   customFpsInput.addEventListener('input', saveSettings);
+
+  cropX.addEventListener('input', saveSettings);
+  cropY.addEventListener('input', saveSettings);
+  cropW.addEventListener('input', saveSettings);
+  cropH.addEventListener('input', saveSettings);
 
   micDeviceSelect.addEventListener('change', () => {
     savedMicDeviceId = micDeviceSelect.value || '';
@@ -1078,29 +1139,35 @@
 
     let targetWidth = srcWidth;
     let targetHeight = srcHeight;
-    let syOffset = 0;
-    const aspectChoice = aspectRatioSelect.value;
+    let sx = 0;
+    let sy = 0;
 
-    // Pencere modundaysa, üstteki çubuğu gizlemek için 32px aşağıdan kırpmaya başla
-    if (selectedSource === 'window') {
-      syOffset = 32;
-      targetHeight = srcHeight - syOffset;
-    }
-
-    if (aspectChoice === 'tiktok') {
-      targetHeight = srcHeight - syOffset;
-      targetWidth = Math.round(targetHeight * (9 / 16));
-      if (targetWidth > srcWidth) {
+    if (aspectRatioSelect.value === 'custom_crop') {
+      targetWidth = parseInt(cropW.value) || srcWidth;
+      targetHeight = parseInt(cropH.value) || srcHeight;
+      sx = parseInt(cropX.value) || 0;
+      sy = parseInt(cropY.value) || 0;
+      if (sx + targetWidth > srcWidth) targetWidth = srcWidth - sx;
+      if (sy + targetHeight > srcHeight) targetHeight = srcHeight - sy;
+    } else {
+      const aspectChoice = aspectRatioSelect.value;
+      if (aspectChoice === 'tiktok') {
+        targetHeight = srcHeight;
+        targetWidth = Math.round(srcHeight * (9 / 16));
+        if (targetWidth > srcWidth) {
+          targetWidth = srcWidth;
+          targetHeight = Math.round(srcWidth * (16 / 9));
+        }
+      } else if (aspectChoice === 'youtube') {
         targetWidth = srcWidth;
-        targetHeight = Math.round(srcWidth * (16 / 9));
+        targetHeight = Math.round(srcWidth * (9 / 16));
+        if (targetHeight > srcHeight) {
+          targetHeight = srcHeight;
+          targetWidth = Math.round(srcHeight * (16 / 9));
+        }
       }
-    } else if (aspectChoice === 'youtube') {
-      targetWidth = srcWidth;
-      targetHeight = Math.round(srcWidth * (9 / 16));
-      if (targetHeight > srcHeight - syOffset) {
-        targetHeight = srcHeight - syOffset;
-        targetWidth = Math.round(targetHeight * (16 / 9));
-      }
+      sx = (srcWidth - targetWidth) / 2;
+      sy = (srcHeight - targetHeight) / 2;
     }
 
     const canvas = document.createElement('canvas');
@@ -1122,9 +1189,21 @@
       if (hiddenVideo.readyState >= 2) {
         const vW = hiddenVideo.videoWidth || srcWidth;
         const vH = hiddenVideo.videoHeight || srcHeight;
-        const sx = (vW - targetWidth) / 2;
-        const sy = (vH - targetHeight) / 2 + syOffset; // Offset eklendi
-        ctx.drawImage(hiddenVideo, sx, sy, targetWidth, targetHeight, 0, 0, targetWidth, targetHeight);
+        
+        let currentSx = sx;
+        let currentSy = sy;
+        let currentTW = targetWidth;
+        let currentTH = targetHeight;
+
+        if (aspectRatioSelect.value === 'custom_crop') {
+           if (currentSx + currentTW > vW) currentTW = vW - currentSx;
+           if (currentSy + currentTH > vH) currentTH = vH - currentSy;
+        } else {
+           currentSx = (vW - targetWidth) / 2;
+           currentSy = (vH - targetHeight) / 2;
+        }
+
+        ctx.drawImage(hiddenVideo, currentSx, currentSy, currentTW, currentTH, 0, 0, canvas.width, canvas.height);
         previewCtx.drawImage(canvas, 0, 0);
       }
     }, 1000 / currentFps);
@@ -1259,6 +1338,10 @@
     formatSelect.disabled = true;
     fpsSelect.disabled = true;
     customFpsInput.disabled = true;
+    cropX.disabled = true;
+    cropY.disabled = true;
+    cropW.disabled = true;
+    cropH.disabled = true;
   }
 
   function togglePause(){
@@ -1302,6 +1385,10 @@
     formatSelect.disabled = false;
     fpsSelect.disabled = false;
     customFpsInput.disabled = false;
+    cropX.disabled = false;
+    cropY.disabled = false;
+    cropW.disabled = false;
+    cropH.disabled = false;
 
     previewEmpty.style.display = 'flex';
     previewCtx.clearRect(0, 0, previewCanvas.width, previewCanvas.height);
